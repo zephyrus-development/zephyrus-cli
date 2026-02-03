@@ -8,29 +8,23 @@ import (
 )
 
 func FetchRaw(username, path string) ([]byte, error) {
-	// Add a timestamp to the end of the URL to bypass GitHub's cache
-	cacheBuster := time.Now().UnixNano()
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/.nexus/refs/heads/master/%s?t=%d",
-		username, path, cacheBuster)
+	// Use the most direct raw URL format
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/.nexus/master/%s?t=%d",
+		username, path, time.Now().UnixNano())
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", "Nexus-CLI-v1")
-	// Standard headers to tell proxies not to cache
-	req.Header.Set("Cache-Control", "no-cache")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("404") // Explicitly return 404 string for main.go to check
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, fmt.Errorf("bad status: %d", resp.StatusCode)
 	}
 
 	return io.ReadAll(resp.Body)
