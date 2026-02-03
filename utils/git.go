@@ -113,5 +113,5 @@ func PushFiles(repoURL string, rawPrivateKey []byte, files map[string][]byte, co
 		return err
 	}
 
-	return r.Push(&git.PushOptions{RemoteName: "origin", Auth: publicKeys})
+	return r.Push(&git.PushOptions{RemoteName: "origin", Auth: publicKeys, Force: true})
 }
