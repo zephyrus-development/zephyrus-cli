@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/go-git/go-billy/v5/memfs"
@@ -76,5 +77,41 @@ func PushFile(repoURL string, rawPrivateKey []byte, filename string, content []b
 	return r.Push(&git.PushOptions{
 		RemoteName: "origin",
 		Auth:       publicKeys,
+		Force:      true,
 	})
+}
+
+func PushFiles(repoURL string, rawPrivateKey []byte, files map[string][]byte, commitMsg string) error {
+	publicKeys, _ := ssh.NewPublicKeys("git", rawPrivateKey, "")
+	publicKeys.HostKeyCallback = cryptossh.InsecureIgnoreHostKey()
+
+	fs := memfs.New()
+	storer := memory.NewStorage()
+	r, _ := git.Init(storer, fs)
+	w, _ := r.Worktree()
+
+	// Add all files to the virtual filesystem
+	for path, content := range files {
+		// Ensure subdirectories exist for files like .config/index
+		dir := filepath.Dir(path)
+		if dir != "." {
+			fs.MkdirAll(dir, 0755)
+		}
+
+		file, _ := fs.Create(path)
+		file.Write(content)
+		file.Close()
+		w.Add(path)
+	}
+
+	w.Commit(commitMsg, &git.CommitOptions{
+		Author: &object.Signature{Name: "Nexus CLI", Email: "nexus@cli.io", When: time.Now()},
+	})
+
+	_, err := r.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{repoURL}})
+	if err != nil {
+		return err
+	}
+
+	return r.Push(&git.PushOptions{RemoteName: "origin", Auth: publicKeys})
 }
