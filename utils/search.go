@@ -9,29 +9,46 @@ import (
 
 func SearchFiles(session *Session, query string) error {
 	fmt.Printf("Searching vault for: \"%s\"\n", query)
-
-	if len(session.Index) == 0 {
-		fmt.Println("Vault is empty.")
-		return nil
-	}
-
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(w, "VAULT PATH\tSTORAGE ID (HEX)")
-	fmt.Fprintln(w, "----------\t----------------")
+	fmt.Fprintln(w, "VAULT PATH\tTYPE\tSTORAGE ID")
+	fmt.Fprintln(w, "----------\t----\t----------")
 
-	foundCount := 0
 	lowerQuery := strings.ToLower(query)
+	found := false
 
-	for vPath, entry := range session.Index {
-		if strings.Contains(strings.ToLower(vPath), lowerQuery) {
-			fmt.Fprintf(w, "%s\t%s\n", vPath, entry.RealName)
-			foundCount++
+	// Recursive helper to walk the Entry tree
+	var walk func(map[string]Entry, string)
+	walk = func(entries map[string]Entry, currentPath string) {
+		for name, entry := range entries {
+			fullPath := name
+			if currentPath != "" {
+				fullPath = currentPath + "/" + name
+			}
+
+			// Check if the current name or full path matches the query
+			if strings.Contains(strings.ToLower(fullPath), lowerQuery) {
+				found = true
+				displayType := "[FILE]"
+				rName := entry.RealName
+				if entry.Type == "folder" {
+					displayType = "[DIR]"
+					rName = "-"
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\n", fullPath, displayType, rName)
+			}
+
+			// If it's a folder, dive deeper
+			if entry.Type == "folder" && entry.Contents != nil {
+				walk(entry.Contents, fullPath)
+			}
 		}
 	}
 
+	walk(session.Index, "")
 	w.Flush()
-	if foundCount == 0 {
-		fmt.Printf("\nNo files found matching \"%s\".\n", query)
+
+	if !found {
+		fmt.Println("No matches found.")
 	}
 	return nil
 }

@@ -6,25 +6,43 @@ import (
 	"text/tabwriter"
 )
 
-func ListFiles(session *Session) error {
-	if len(session.Index) == 0 {
-		fmt.Println("--------------------------------------------------")
-		fmt.Println("ℹ Your vault is currently empty.")
-		fmt.Println("--------------------------------------------------")
+func ListFiles(session *Session, folderPath string) error {
+	// Start with the root map
+	currentMap := session.Index
+
+	// If a path is provided, navigate to that entry
+	if folderPath != "" && folderPath != "/" {
+		entry, err := session.Index.FindEntry(folderPath)
+		if err != nil {
+			return err
+		}
+		if entry.Type != "folder" {
+			return fmt.Errorf("'%s' is a file, not a folder", folderPath)
+		}
+		currentMap = entry.Contents
+	}
+
+	if len(currentMap) == 0 {
+		fmt.Println("Directory is empty.")
 		return nil
 	}
 
-	fmt.Printf("Vault Index for %s (Local Cache):\n\n", session.Username)
-
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(w, "VAULT PATH\tSTORAGE ID (HEX)")
-	fmt.Fprintln(w, "----------\t----------------")
+	fmt.Fprintln(w, "NAME\tTYPE\tSTORAGE ID")
+	fmt.Fprintln(w, "----\t----\t----------")
 
-	for vPath, entry := range session.Index {
-		fmt.Fprintf(w, "%s\t%s\n", vPath, entry.RealName)
+	for name, entry := range currentMap {
+		displayType := "[FILE]"
+		rName := entry.RealName
+		displayName := name
+
+		if entry.Type == "folder" {
+			displayType = "[DIR]"
+			rName = "-"
+			displayName = name + "/"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\n", displayName, displayType, rName)
 	}
 
-	w.Flush()
-	fmt.Printf("\nTotal files: %d\n", len(session.Index))
-	return nil
+	return w.Flush()
 }

@@ -72,19 +72,19 @@ func (vi VaultIndex) AddFile(path string, realName string) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	currentMap := vi
 
-	// Navigate/Create folders
 	for i := 0; i < len(parts)-1; i++ {
 		part := parts[i]
-		if _, exists := currentMap[part]; !exists {
-			currentMap[part] = Entry{
+		entry, exists := currentMap[part]
+		if !exists {
+			entry = Entry{
 				Type:     "folder",
 				Contents: make(map[string]Entry),
 			}
+			currentMap[part] = entry
 		}
-		currentMap = currentMap[part].Contents
+		currentMap = entry.Contents
 	}
 
-	// Add the file entry
 	fileName := parts[len(parts)-1]
 	currentMap[fileName] = Entry{
 		Type:     "file",
