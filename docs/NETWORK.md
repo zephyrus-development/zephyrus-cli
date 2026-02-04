@@ -33,7 +33,7 @@ Fetches raw file content from a GitHub repository using the GitHub raw content A
 
 Files are fetched using GitHub's raw content API with a timestamp cache buster:
 ```
-https://raw.githubusercontent.com/{username}/.nexus/master/{path}?t={nanoseconds}
+https://raw.githubusercontent.com/{username}/.zephyrus/master/{path}?t={nanoseconds}
 ```
 
 **Process:**
@@ -81,7 +81,7 @@ if err != nil {
 
 ### Notes
 
-- Files must exist in the `.nexus` GitHub repository
+- Files must exist in the `.zephyrus` GitHub repository
 - The repository can be private (accessed via SSH for git operations, but FetchRaw requires public access or GitHub token)
 - Cache busting ensures fresh data on each request
 - 10-second timeout is suitable for typical network conditions

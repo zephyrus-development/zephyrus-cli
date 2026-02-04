@@ -28,7 +28,7 @@ func PushFiles(repoURL string, rawPrivateKey []byte, files map[string][]byte, co
 Performs stateless append/update operations to a git repository while preserving existing remote files. This function handles incremental updates without downloading the entire repository history.
 
 **Parameters:**
-- `repoURL`: The git repository URL (e.g., "git@github.com:username/.nexus.git")
+- `repoURL`: The git repository URL (e.g., "git@github.com:username/.zephyrus.git")
 - `rawPrivateKey`: The raw SSH private key bytes for authentication
 - `files`: A map of file paths to their content to push
   - Key: File path in the repository
@@ -74,7 +74,7 @@ files := map[string][]byte{
 }
 
 err := PushFiles(
-    "git@github.com:myusername/.nexus.git",
+    "git@github.com:myusername/.zephyrus.git",
     privateKeyBytes,
     files,
     "Nexus: Uploaded new files",

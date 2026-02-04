@@ -28,11 +28,11 @@ func SetupVault(githubUser string, keyFilePath string, password string) error {
 	}
 
 	// 2. Verify Repo (Public Check)
-	repoURL := fmt.Sprintf("git@github.com:%s/.nexus.git", githubUser)
-	repoWebURL := fmt.Sprintf("https://github.com/%s/.nexus", githubUser)
+	repoURL := fmt.Sprintf("git@github.com:%s/.zephyrus.git", githubUser)
+	repoWebURL := fmt.Sprintf("https://github.com/%s/.zephyrus", githubUser)
 	resp, err := http.Head(repoWebURL)
 	if err != nil || resp.StatusCode != 200 {
-		return fmt.Errorf("repository '.nexus' not found at %s. Please create it manually on GitHub first", repoWebURL)
+		return fmt.Errorf("repository '.zephyrus' not found at %s. Please create it manually on GitHub first", repoWebURL)
 	}
 
 	// 3. Resolve Key Path

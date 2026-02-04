@@ -16,7 +16,7 @@ import (
 var (
 	username    string
 	keyPath     string
-	historyFile = filepath.Join(os.TempDir(), ".nexus_history")
+	historyFile = filepath.Join(os.TempDir(), ".zephyrus_history")
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "", "GitHub username (forces stateless mode if no session exists)")
 
 	// --- SESSION HELPER ---
-	// This logic prioritizes the local nexus.conf, but falls back to
+	// This logic prioritizes the local zephyrus.conf, but falls back to
 	// manual auth if -u is provided or if the user is not connected.
 	getEffectiveSession := func() (*utils.Session, error) {
 		// 1. Check for active local session
@@ -118,7 +118,7 @@ func main() {
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			// 1. Check if the config file exists BEFORE starting
-			_, err := os.Stat("nexus.conf")
+			_, err := os.Stat("zephyrus.conf")
 			isPersistent := err == nil
 
 			session, err := getEffectiveSession()
@@ -178,7 +178,7 @@ func main() {
 		Short:   "Delete a file or folder (recursive)",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := os.Stat("nexus.conf")
+			_, err := os.Stat("zephyrus.conf")
 			isPersistent := err == nil
 
 			session, err := getEffectiveSession()
@@ -237,7 +237,7 @@ func main() {
 		Short: "Wipe all remote data",
 		Run: func(cmd *cobra.Command, args []string) {
 			// Check if we are persistent BEFORE running
-			_, statErr := os.Stat("nexus.conf")
+			_, statErr := os.Stat("zephyrus.conf")
 			isPersistent := statErr == nil
 
 			session, err := getEffectiveSession()

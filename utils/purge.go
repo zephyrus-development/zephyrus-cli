@@ -15,7 +15,7 @@ import (
 
 // PurgeVault wipes the remote repository by forcing an empty commit history.
 func PurgeVault(session *Session) error {
-	repoURL := fmt.Sprintf("git@github.com:%s/.nexus.git", session.Username)
+	repoURL := fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username)
 
 	// 1. Prepare an entirely new, empty Git environment in memory
 	storer := memory.NewStorage()

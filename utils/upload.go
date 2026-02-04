@@ -7,7 +7,7 @@ import (
 )
 
 func UploadFile(sourcePath string, vaultPath string, session *Session) error {
-	repoURL := fmt.Sprintf("git@github.com:%s/.nexus.git", session.Username)
+	repoURL := fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username)
 
 	// 1. Read source
 	data, err := os.ReadFile(sourcePath)

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const configPath = "nexus.conf"
+const configPath = "zephyrus.conf"
 
 // globalSession stores the session in RAM for the REPL/Stateless mode
 var globalSession *Session

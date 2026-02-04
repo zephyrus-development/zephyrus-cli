@@ -17,7 +17,7 @@ import (
 
 // DeletePath handles both single file deletion and recursive folder deletion
 func DeletePath(vaultPath string, session *Session) error {
-	repoURL := fmt.Sprintf("git@github.com:%s/.nexus.git", session.Username)
+	repoURL := fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username)
 
 	// 1. Navigate to the target
 	parts := strings.Split(strings.Trim(vaultPath, "/"), "/")

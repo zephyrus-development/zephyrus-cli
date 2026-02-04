@@ -90,7 +90,7 @@ Initializes a new Nexus vault by verifying the GitHub repository, encrypting the
 **Pre-requisites:**
 
 Before running setup:
-1. Create a GitHub repository named `.nexus` in your account
+1. Create a GitHub repository named `.zephyrus` in your account
 2. Have SSH access to GitHub configured (or provide path to private key)
 3. Know the password you want to use for the vault
 
@@ -124,7 +124,7 @@ Create a Vault Password (to encrypt your cloud key): •••••••••
 
 ### What Gets Stored
 
-After setup, your GitHub `.nexus` repository will contain:
+After setup, your GitHub `.zephyrus` repository will contain:
 ```
 .config/
   key  (your encrypted SSH private key)
@@ -140,7 +140,7 @@ After setup, your GitHub `.nexus` repository will contain:
 ### Typical Workflow
 
 ```go
-// 1. User creates .nexus repository on GitHub
+// 1. User creates .zephyrus repository on GitHub
 // 2. User has SSH private key for GitHub
 // 3. Run setup
 err := SetupVault("", "", "")
@@ -159,7 +159,7 @@ if err != nil {
 ### Notes
 
 - The repository must be created manually on GitHub before running setup
-- Repository name must be exactly `.nexus` (with the dot)
+- Repository name must be exactly `.zephyrus` (with the dot)
 - SSH key path can be relative (e.g., `~/.ssh/id_ed25519`) - paths will be expanded
 - Password setup does not use `GetPassword()` (echo enabled); consider updating for security
 - Force push is used to ensure setup succeeds even if repository isn't empty

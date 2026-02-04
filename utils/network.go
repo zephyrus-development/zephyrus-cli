@@ -9,7 +9,7 @@ import (
 
 func FetchRaw(username, path string) ([]byte, error) {
 	// Use the most direct raw URL format
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/.nexus/master/%s?t=%d",
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/.zephyrus/master/%s?t=%d",
 		username, path, time.Now().UnixNano())
 
 	client := &http.Client{Timeout: 10 * time.Second}
