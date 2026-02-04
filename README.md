@@ -18,15 +18,24 @@ Want an interactive demo of our sharing capabilities, [click here](https://zephy
 - ☁️ **GitHub-Backed Storage**: Uses a private GitHub repository as distributed storage
 - 🗂️ **Hierarchical Organization**: Create folders and organize files with full path support
 - 🔍 **Search Functionality**: Quickly find files by name or path
-- 📝 **Version Control**: Full git history of all vault operations
+- 📝 **Version Control**: Full git history of all vault operations with customizable commit messages
 - 💻 **Cross-Platform**: Works on Windows, macOS, and Linux
 - 🎯 **Stateless Mode**: Use with `-u` flag to authenticate without persistent sessions
-- 🔄 **Interactive Shell**: REPL mode for multiple commands without re-authentication
+- 🔄 **Interactive Shell (REPL)**: 
+  - Multiple commands without re-authentication
+  - TAB completion for file paths
+  - Local filesystem access via `lls`/`ldir` commands
+  - Real-time command history
 - 📤 **Secure File Sharing**: Share individual files without exposing your entire vault
   - Generate shareable links with unique encryption keys
   - Share via command-line or browser-based download page
   - Recipients decrypt files in their browser (zero-knowledge sharing)
-  - Complete file metadata and history in share links
+  - Search and manage shared files by name
+  - Easy revocation of access
+- ⚙️ **Configurable Settings**: Customize commit attribution, hash lengths, and messages
+- 📊 **Vault Information**: Get statistics and metadata about files and vault size
+- 📖 **File Preview**: Read file contents directly without download
+- ⏱️ **Progress Indicators**: Visual feedback during all vault operations
 
 ## Prerequisites
 
@@ -125,6 +134,7 @@ Username: myusername
 Password: ••••••••••
 ✔ Welcome, myusername. Session Active.
 Type 'help' for commands or 'exit' to quit.
+(Press TAB to autocomplete file paths)
 
 zep> upload ./document.pdf documents/report.pdf
 ✔ Upload successful.
@@ -134,8 +144,18 @@ NAME          TYPE    STORAGE ID
 ----          ----    ----------
 report.pdf    [FILE]  a3f2e1c9d4b6f8e2
 
+zep> lls Documents
+file1.txt
+file2.pdf
+
 zep> exit
 ```
+
+**REPL Features:**
+- **TAB Completion**: Press TAB to cycle through file path suggestions
+- **Local File Access**: Use `lls`/`ldir` to browse local filesystem without exiting shell
+- **Persistent Session**: Stay authenticated across multiple commands
+- **Command History**: Shell remembers previous commands
 
 ### Command Line Mode
 
@@ -668,6 +688,232 @@ Completely removes all files and history from the remote vault. **This is irreve
 - You want to completely reset your vault
 - You're decommissioning the vault
 - You suspect a security compromise and want a clean slate
+
+---
+
+### `read` - Display File Contents
+
+Read and display file contents directly from the vault without downloading to disk.
+
+**Usage:**
+```bash
+./zep read <vault-path> [--shared <share-string>]
+```
+
+**Aliases:** `cat`, `view`, `display`
+
+**Arguments:**
+- `vault-path`: Path to file in vault
+
+**Flags:**
+- `--shared <share-string>`: Read a shared file
+
+**Examples:**
+```bash
+# Read a text file
+./zep read documents/notes.txt
+
+# Read with pipes
+./zep read documents/log.txt | grep ERROR
+
+# Read shared file
+./zep read _ --shared "username:ref:password:base64"
+```
+
+**Use Cases:**
+- Quick file preview without saving to disk
+- Content search and filtering
+- Viewing configuration files
+- Checking log files
+
+**Note**: Best for text files. Binary files will appear as gibberish.
+
+---
+
+### `info` - Display Vault or File Information
+
+Get detailed information about your vault or specific files.
+
+**Usage:**
+```bash
+./zep info [file-path]
+```
+
+**Examples:**
+```bash
+# Vault statistics (no arguments)
+./zep info
+# Output: Total files, folders, size, settings, etc.
+
+# File information
+./zep info documents/report.pdf
+# Output: File size, storage ID, encryption key, path, etc.
+```
+
+**Shows:**
+- When called without arguments:
+  - Total files and folders
+  - Total vault size
+  - Commit author and message settings
+  - File/share hash lengths
+
+- When called with file path:
+  - File name, path, type
+  - Storage ID and encrypted key
+  - File size
+  - Folder contents summary
+
+**Use Cases:**
+- Audit vault size and contents
+- Verify file metadata before sharing
+- Check storage efficiency
+- Find large files
+
+---
+
+### `settings show` - Display Vault Settings
+
+Display all current vault configuration settings.
+
+**Usage:**
+```bash
+./zep settings show
+```
+
+**Example Output:**
+```
+=== Vault Settings ===
+Commit Author: Zephyrus <auchrio@proton.me>
+Commit Message: Zephyrus: Updated Vault
+File Hash Length: 16 chars
+Share Hash Length: 6 chars
+```
+
+**Shows:**
+- Git commit author name and email
+- Default commit message
+- File storage ID length
+- Share reference hash length
+
+---
+
+### `settings set` - Modify Vault Settings
+
+Update specific vault configuration values.
+
+**Usage:**
+```bash
+./zep settings set <key> <value>
+```
+
+**Arguments:**
+- `key`: Setting to modify (case-insensitive)
+  - `author_name` - Git commit author
+  - `author_email` - Git commit email
+  - `commit_message` - Default commit message
+  - `file_hash_length` - Storage ID length (8-64)
+  - `share_hash_length` - Share ref length (4-32)
+- `value`: New value for setting
+
+**Examples:**
+```bash
+# Custom git author
+./zep settings set author_name "Engineering Team"
+./zep settings set author_email "eng@company.com"
+
+# Longer hash lengths
+./zep settings set file_hash_length 32
+./zep settings set share_hash_length 8
+
+# Custom commit message
+./zep settings set commit_message "Daily Backup"
+```
+
+**Effect:** All future operations use updated settings in git history.
+
+---
+
+### `shared info` - View Share Details
+
+Get detailed information about a specific share.
+
+**Usage:**
+```bash
+./zep shared info <share-id>
+```
+
+**Arguments:**
+- `share-id`: Share reference ID
+
+**Example:**
+```bash
+./zep shared info 72cTWg
+# Output: Filename, vault path, creation date, share details
+```
+
+---
+
+### `localls` - List Local Files
+
+List files from your local filesystem. REPL-only command.
+
+**Usage (REPL only):**
+```bash
+zep> localls [arguments]
+```
+
+**Aliases:** `lls`
+
+**Arguments:** Pass any `ls` (Unix/Linux) or `dir` (Windows) arguments
+
+**Behavior:**
+- **Linux/macOS**: Runs `ls` command
+- **Windows**: Runs `ls` if available, falls back to `dir`
+
+**Examples:**
+```bash
+zep> lls
+zep> lls Documents
+zep> lls -la
+zep> lls *.pdf
+```
+
+**Use Cases:**
+- Verify files exist before upload
+- Navigate local directories in REPL
+- No need to exit shell to check files
+
+---
+
+### `localdir` - Detailed Local Directory Listing
+
+List files with detailed information from your local filesystem. REPL-only command.
+
+**Usage (REPL only):**
+```bash
+zep> localdir [arguments]
+```
+
+**Aliases:** `ldir`
+
+**Arguments:** Pass any `dir` (Windows) or `ls` (Unix/Linux) arguments
+
+**Behavior:**
+- **Windows**: Runs `dir` with detailed output
+- **Linux/macOS**: Runs `ls -la` for equivalent detail
+
+**Examples:**
+```bash
+zep> ldir
+zep> ldir Downloads
+zep> ldir /A
+```
+
+**Use Cases:**
+- Check file sizes before upload
+- Verify file modification times
+- Monitor directory state
+- Confirm file availability
 
 ---
 

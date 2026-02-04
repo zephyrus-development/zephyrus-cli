@@ -821,10 +821,36 @@ Examples:
 		},
 	}
 
+	// --- LOCAL FILESYSTEM COMMANDS (REPL-only) ---
+	var locallsCmd = &cobra.Command{
+		Use:     "localls [args...]",
+		Aliases: []string{"lls"},
+		Short:   "Run 'ls' command from main terminal (REPL-only)",
+		Args:    cobra.ArbitraryArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := utils.LocalLS(args); err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+		},
+	}
+
+	var localdirCmd = &cobra.Command{
+		Use:     "localdir [args...]",
+		Aliases: []string{"ldir"},
+		Short:   "Run 'dir' command from main terminal (REPL-only)",
+		Args:    cobra.ArbitraryArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := utils.LocalDir(args); err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+		},
+	}
+
 	rootCmd.AddCommand(
 		setupCmd, connectCmd, disconnectCmd,
 		uploadCmd, downloadCmd, deleteCmd,
 		listCmd, searchCmd, purgeCmd, shareCmd, readCmd, sharedCmd, settingsCmd, infoCmd,
+		locallsCmd, localdirCmd,
 		shellCmd,
 	)
 
