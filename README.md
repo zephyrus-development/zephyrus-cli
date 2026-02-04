@@ -72,7 +72,15 @@ scoop uninstall zep
 
 ### Setup Your Vault
 
-Before you can use Zephyrus ClI, you must create a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#deploy-keys) on the `.zephyrus` repository you have created, to do this you must generate a ssh keypair through either the `ssh-keygen` command (most secure) or through a website such as [this one](https://www.wpoven.com/tools/create-ssh-key), then add the public key to the deploy key settings tab of your `.zephyrus` github repository.
+Before you can use Zephyrus CLI, you must set up a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#deploy-keys) on the `.zephyrus` repository:
+
+1. Generate an SSH keypair using either:
+   - `ssh-keygen` command (most secure)
+   - Online tool like [this one](https://www.wpoven.com/tools/create-ssh-key)
+
+2. Add the public key to your `.zephyrus` repository's deploy key settings
+
+3. **Important**: Enable **read and write** permissions for the deploy key (required for uploading and managing files)
 
 Then to start using Zephyrus CLI, initialize your vault:
 

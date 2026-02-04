@@ -1,0 +1,5 @@
+This is a test file to act as a interactive proof of concept, this file is stored encrypted in the zephyrus-development/.zephyrus repository, check it out with the link below.
+
+https://github.com/zephyrus-development/.zephyrus/
+
+The web page you recieved this file from fetches and decrypts the file using the data in the url without ever sending anything back to the server.
