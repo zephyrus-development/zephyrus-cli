@@ -1,5 +1,4 @@
 *.exe
-go.mod
 go.sum
 .config/
 *.conf
