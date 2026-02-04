@@ -33,9 +33,9 @@ Before you can use Nexus CLI, you'll need:
 
 1. Visit the [Nexus CLI Releases Page](https://github.com/NexusCLI/NexusCLI/releases)
 2. Download the latest release for your operating system:
-   - **Windows**: `nexus-cli-windows-amd64.exe`
-   - **macOS**: `nexus-cli-darwin-amd64` (Intel) or `nexus-cli-darwin-arm64` (Apple Silicon)
-   - **Linux**: `nexus-cli-linux-amd64`
+   - **Windows**: `nexus-cli.exe`
+   - **macOS**: Please download and compile from source.
+   - **Linux**: Please download and compile from source, linux release coming soon.
 3. Make the binary executable (macOS/Linux):
    ```bash
    chmod +x nexus-cli-*
