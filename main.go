@@ -431,6 +431,8 @@ func main() {
 			fmt.Printf("Filename: %s\n", filename)
 			fmt.Println("\nShare this string with recipient:")
 			fmt.Println(shareString)
+			fmt.Println("\nWeb Share Link:")
+			fmt.Printf("  https://zephyrus-development.github.io/shared/#%s\n", shareString)
 			fmt.Println("\nRecipient can download with:")
 			fmt.Printf("  zep download _ output.file --shared \"%s\"\n", shareString)
 
@@ -563,13 +565,15 @@ func main() {
 
 			// Encode filename to base64 for share string
 			encodedFilename := base64.StdEncoding.EncodeToString([]byte(entry.Name))
+			shareString := fmt.Sprintf("%s:%s:%s:%s", session.Username, entry.Reference, entry.Password, encodedFilename)
 
 			fmt.Printf("\n📄 SHARED FILE INFO\n")
 			fmt.Printf("Reference:     %s\n", entry.Reference)
 			fmt.Printf("File Name:     %s\n", entry.OriginalPath)
 			fmt.Printf("Shared At:     %s\n", entry.SharedAt.Format("2006-01-02 15:04:05"))
 			fmt.Printf("Password:      %s\n", entry.Password)
-			fmt.Printf("\nShare String:  %s:%s:%s:%s\n\n", session.Username, entry.Reference, entry.Password, encodedFilename)
+			fmt.Printf("\nShare String:  %s\n", shareString)
+			fmt.Printf("\nWeb Share Link: https://zephyrus-development.github.io/shared/#%s\n\n", shareString)
 		},
 	}
 

@@ -21,6 +21,10 @@ Zephyrus CLI is a command-line tool that transforms your GitHub repository into 
 - 🎯 **Stateless Mode**: Use with `-u` flag to authenticate without persistent sessions
 - 🔄 **Interactive Shell**: REPL mode for multiple commands without re-authentication
 - 📤 **Secure File Sharing**: Share individual files without exposing your entire vault
+  - Generate shareable links with unique encryption keys
+  - Share via command-line or browser-based download page
+  - Recipients decrypt files in their browser (zero-knowledge sharing)
+  - Complete file metadata and history in share links
 
 ## Prerequisites
 
@@ -150,7 +154,78 @@ If you haven't run `connect`, you can use any command with the `-u` flag to auth
 
 You'll be prompted for your vault password. This doesn't create a persistent session.
 
+## Secure File Sharing
+
+Zephyrus makes it easy to securely share individual files with others without exposing your entire vault.
+
+### How It Works
+
+1. **Generate a Share Link**: Create a unique, encrypted share link for any file
+2. **Each file gets its own encryption key**: Recipients use a separate password to decrypt
+3. **Browser-based decryption**: Files are decrypted in the recipient's browser (zero-knowledge)
+4. **No vault access needed**: Recipients don't need a Zephyrus account or access to your vault
+
+### Share a File
+
+```bash
+# Enter interactive mode and share
+zep> share documents/report.pdf
+Enter Share Password (recipients will use this to decrypt): mysharepass123
+
+✔ File shared successfully!
+Filename: report.pdf
+
+Share this string with recipient:
+Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg==
+
+Web Share Link:
+  https://zephyrus-development.github.io/shared/#Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg==
+
+Recipient can download with:
+  zep download _ output.file --shared "Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg=="
+
+Or read with:
+  zep read _ --shared "Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg=="
+```
+
+### Recipient Options
+
+Recipients can access shared files in 3 ways:
+
+1. **Web Browser** (Easiest): Click the share link and download securely in browser
+   ```
+   https://zephyrus-development.github.io/shared/#Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg==
+   ```
+
+2. **CLI Download**: Use the Zephyrus CLI to download
+   ```bash
+   zep download _ output.pdf --shared "Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg=="
+   ```
+
+3. **CLI Read**: Display file content directly (no save)
+   ```bash
+   zep read _ --shared "Auchrio:72cTWg:mysharepass123:cmVwb3J0LnBkZg=="
+   ```
+
+### Manage Shared Files
+
+View all shared files and their metadata:
+```bash
+zep shared ls
+```
+
+Get detailed info and regenerate share link:
+```bash
+zep shared info 72cTWg
+```
+
+Revoke a share (stop allowing access):
+```bash
+zep shared rm 72cTWg
+```
+
 ## Command Reference
+
 
 ### `setup` - Initialize Your Vault
 

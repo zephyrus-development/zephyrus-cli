@@ -1,10 +1,10 @@
 {
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "A secure, encrypted file vault backed by GitHub. Store sensitive files with end-to-end encryption.",
     "homepage": "https://github.com/zephyrus-development/zephyrus-cli",
     "license": "MIT",
-    "url": "https://github.com/zephyrus-development/zephyrus-cli/releases/download/v1.2.0/zep.exe",
-    "hash": "3dad4c18e99f1253113288fcf1c19a5187de56a708f6972b28bc061874ab763e",
+    "url": "https://github.com/zephyrus-development/zephyrus-cli/releases/download/v1.2.1/zep.exe",
+    "hash": "88dadd8db2836be31efc555c8586b780adf5b76565a25633e2a832745b3efdc2",
     "bin": "zep.exe",
     "checkver": {
         "url": "https://api.github.com/repos/zephyrus-development/zephyrus-cli/releases/latest",
