@@ -395,6 +395,10 @@ func main() {
 		Short: "Generate a share string for a file",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			// Check if the config file exists BEFORE starting
+			_, err := os.Stat("zephyrus.conf")
+			isPersistent := err == nil
+
 			session, err := getEffectiveSession()
 			if err != nil {
 				fmt.Printf("❌ Authentication failed: %v\n", err)
@@ -412,6 +416,11 @@ func main() {
 			if err != nil {
 				fmt.Printf("❌ Share failed: %v\n", err)
 				return
+			}
+
+			// Save the updated session if we were already in a persistent session
+			if isPersistent {
+				session.Save()
 			}
 
 			fmt.Println("\n✔ File shared successfully!")
@@ -457,6 +466,106 @@ func main() {
 	}
 	readCmd.Flags().StringVar(&readSharedFlag, "shared", "", "Read a shared file using share string (username:storage_id:key)")
 
+	// --- SHARED MANAGEMENT ---
+	var sharedCmd = &cobra.Command{
+		Use:   "shared",
+		Short: "Manage shared files",
+	}
+
+	var sharedLsCmd = &cobra.Command{
+		Use:   "ls",
+		Short: "List all shared files",
+		Run: func(cmd *cobra.Command, args []string) {
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			files := utils.ListSharedFiles(session)
+			if len(files) == 0 {
+				fmt.Println("No shared files.")
+				return
+			}
+
+			fmt.Println("\n📤 SHARED FILES")
+			fmt.Println("REFERENCE  FILE NAME              SHARED AT")
+			fmt.Println("---------  ----------              ---------")
+			for _, f := range files {
+				fmt.Printf("%-9s %-24s %s\n", f.Reference, f.OriginalPath, f.SharedAt.Format("2006-01-02 15:04"))
+			}
+			fmt.Println()
+		},
+	}
+
+	var sharedRmCmd = &cobra.Command{
+		Use:     "rm [reference]",
+		Aliases: []string{"revoke", "delete"},
+		Short:   "Revoke/remove a shared file",
+		Args:    cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			reference := args[0]
+
+			// Confirm revocation
+			fmt.Printf("⚠️  Revoke shared file %s? (y/N): ", reference)
+			var confirm string
+			fmt.Scanln(&confirm)
+			if confirm != "y" && confirm != "yes" {
+				fmt.Println("Cancelled.")
+				return
+			}
+
+			err = utils.RevokeSharedFile(reference, session)
+			if err != nil {
+				fmt.Printf("❌ Revoke failed: %v\n", err)
+				return
+			}
+
+			// Save updated session if persistent
+			_, statErr := os.Stat("zephyrus.conf")
+			if statErr == nil {
+				session.Save()
+			}
+
+			fmt.Printf("✔ Shared file '%s' revoked.\n", reference)
+		},
+	}
+
+	var sharedInfoCmd = &cobra.Command{
+		Use:   "info [reference]",
+		Short: "Show info about a shared file",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			reference := args[0]
+			entry, err := utils.GetSharedFileInfo(reference, session)
+			if err != nil {
+				fmt.Printf("❌ %v\n", err)
+				return
+			}
+
+			fmt.Printf("\n📄 SHARED FILE INFO\n")
+			fmt.Printf("Reference:     %s\n", entry.Reference)
+			fmt.Printf("File Name:     %s\n", entry.OriginalPath)
+			fmt.Printf("Shared At:     %s\n", entry.SharedAt.Format("2006-01-02 15:04:05"))
+			fmt.Printf("Password:      %s\n", entry.Password)
+			fmt.Printf("\nShare String:  %s:%s:%s\n\n", session.Username, entry.Reference, entry.Password)
+		},
+	}
+
+	sharedCmd.AddCommand(sharedLsCmd, sharedRmCmd, sharedInfoCmd)
+
 	// --- SHELL ---
 	var shellCmd = &cobra.Command{
 		Use:     "shell [username]",
@@ -474,7 +583,7 @@ func main() {
 	rootCmd.AddCommand(
 		setupCmd, connectCmd, disconnectCmd,
 		uploadCmd, downloadCmd, deleteCmd,
-		listCmd, searchCmd, purgeCmd, shareCmd, readCmd,
+		listCmd, searchCmd, purgeCmd, shareCmd, readCmd, sharedCmd,
 		shellCmd,
 	)
 

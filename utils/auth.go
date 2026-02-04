@@ -13,10 +13,11 @@ const configPath = "zephyrus.conf"
 var globalSession *Session
 
 type Session struct {
-	Username string     `json:"username"`
-	Password string     `json:"password"`
-	RawKey   []byte     `json:"raw_key"`
-	Index    VaultIndex `json:"index"`
+	Username    string       `json:"username"`
+	Password    string       `json:"password"`
+	RawKey      []byte       `json:"raw_key"`
+	Index       VaultIndex   `json:"index"`
+	SharedIndex *SharedIndex `json:"shared_index"`
 }
 
 // SetGlobalSession injects a session into RAM (used by the REPL)
@@ -55,6 +56,12 @@ func GetSession() (*Session, error) {
 	}
 	var s Session
 	err = json.Unmarshal(data, &s)
+
+	// 3. Ensure SharedIndex is initialized
+	if s.SharedIndex == nil {
+		s.SharedIndex = NewSharedIndex()
+	}
+
 	return &s, err
 }
 
@@ -91,10 +98,24 @@ func FetchSessionStateless(username string, password string) (*Session, error) {
 		}
 	}
 
+	// 3. Fetch & Decrypt Shared Index
+	var sharedIndex *SharedIndex
+	rawSharedIndex, err := FetchRaw(username, "shared/.config/index")
+	if err != nil {
+		// Shared index doesn't exist yet, that's fine
+		sharedIndex = NewSharedIndex()
+	} else {
+		sharedIndex, err = DecryptSharedIndex(rawSharedIndex, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt shared index: %w", err)
+		}
+	}
+
 	return &Session{
-		Username: username,
-		Password: password,
-		RawKey:   rawKey,
-		Index:    index,
+		Username:    username,
+		Password:    password,
+		RawKey:      rawKey,
+		Index:       index,
+		SharedIndex: sharedIndex,
 	}, nil
 }

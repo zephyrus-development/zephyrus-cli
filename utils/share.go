@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"time"
 )
 
 // GenerateShareReference generates a random 6-character base62 reference
@@ -77,13 +78,46 @@ func ShareFile(vaultPath string, sharePassword string, session *Session) (string
 		fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username),
 		session.RawKey,
 		filesToPush,
-		fmt.Sprintf("Share file: %s", vaultPath),
+		fmt.Sprintf("Zephyrus: Updated Vault"),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload shared file: %w", err)
 	}
 
-	// 8. Generate the share string: username:reference:sharepassword
+	// 8. Add entry to shared index
+	if session.SharedIndex == nil {
+		session.SharedIndex = NewSharedIndex()
+	}
+	indexEntry := SharedFileEntry{
+		Name:         vaultPath,
+		Reference:    ref,
+		Password:     sharePassword,
+		SharedAt:     time.Now(),
+		OriginalPath: vaultPath,
+	}
+	session.SharedIndex.AddEntry(indexEntry)
+
+	// 9. Upload the updated shared index
+	indexJSON, err := session.SharedIndex.EncryptForRemote(session.Password)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt shared index: %w", err)
+	}
+
+	indexFilesToPush := map[string][]byte{
+		"shared/.config/index": indexJSON,
+	}
+
+	err = PushFiles(
+		fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username),
+		session.RawKey,
+		indexFilesToPush,
+		fmt.Sprintf("Update shared index"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload shared index: %w", err)
+	}
+
+	// 10. Generate the share string: username:reference:sharepassword
 	shareString := fmt.Sprintf("%s:%s:%s", session.Username, ref, sharePassword)
 
 	return shareString, nil
