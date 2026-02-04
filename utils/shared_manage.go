@@ -32,11 +32,13 @@ func RevokeSharedFile(reference string, session *Session) error {
 		"shared/.config/index": indexJSON,
 	}
 
-	err = PushFiles(
+	err = PushFilesWithAuthor(
 		fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username),
 		session.RawKey,
 		indexFilesToPush,
-		fmt.Sprintf("Zephyrus: Updated Vault"),
+		session.Settings.CommitMessage,
+		session.Settings.CommitAuthorName,
+		session.Settings.CommitAuthorEmail,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update shared index: %w", err)

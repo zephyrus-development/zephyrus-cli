@@ -31,10 +31,10 @@ func PurgeVault(session *Session) error {
 	r, _ := git.Init(storer, fs)
 	w, _ := r.Worktree()
 
-	commit, err := w.Commit("Zephyrus: Updated Vault", &git.CommitOptions{
+	commit, err := w.Commit(session.Settings.CommitMessage, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "Zephyrus",
-			Email: "Auchrio@proton.me",
+			Name:  session.Settings.CommitAuthorName,
+			Email: session.Settings.CommitAuthorEmail,
 			When:  time.Now(),
 		},
 		AllowEmptyCommits: true,

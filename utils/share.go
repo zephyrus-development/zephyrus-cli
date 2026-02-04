@@ -10,11 +10,16 @@ import (
 	"time"
 )
 
-// GenerateShareReference generates a random 6-character base62 reference
+// GenerateShareReference generates a base62 reference with default 6 characters
 func GenerateShareReference() (string, error) {
+	return GenerateShareReferenceWithLength(6)
+}
+
+// GenerateShareReferenceWithLength generates a base62 reference with configurable length
+func GenerateShareReferenceWithLength(length int) (string, error) {
 	const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	ref := make([]byte, 6)
-	for i := 0; i < 6; i++ {
+	ref := make([]byte, length)
+	for i := 0; i < length; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
 		if err != nil {
 			return "", err
@@ -58,8 +63,8 @@ func ShareFile(vaultPath string, sharePassword string, session *Session) (string
 		return "", fmt.Errorf("decryption failed: %w", err)
 	}
 
-	// 5. Generate a new 6-char reference
-	ref, err := GenerateShareReference()
+	// 5. Generate a new reference with configurable length from settings
+	ref, err := GenerateShareReferenceWithLength(session.Settings.ShareHashLength)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate share reference: %w", err)
 	}
@@ -76,11 +81,13 @@ func ShareFile(vaultPath string, sharePassword string, session *Session) (string
 		sharedPath: shareEncrypted,
 	}
 
-	err = PushFiles(
+	err = PushFilesWithAuthor(
 		fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username),
 		session.RawKey,
 		filesToPush,
-		fmt.Sprintf("Zephyrus: Updated Vault"),
+		session.Settings.CommitMessage,
+		session.Settings.CommitAuthorName,
+		session.Settings.CommitAuthorEmail,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload shared file: %w", err)
@@ -109,11 +116,13 @@ func ShareFile(vaultPath string, sharePassword string, session *Session) (string
 		"shared/.config/index": indexJSON,
 	}
 
-	err = PushFiles(
+	err = PushFilesWithAuthor(
 		fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username),
 		session.RawKey,
 		indexFilesToPush,
-		fmt.Sprintf("Update shared index"),
+		session.Settings.CommitMessage,
+		session.Settings.CommitAuthorName,
+		session.Settings.CommitAuthorEmail,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload shared index: %w", err)

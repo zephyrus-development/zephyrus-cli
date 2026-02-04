@@ -13,11 +13,12 @@ const configPath = "zephyrus.conf"
 var globalSession *Session
 
 type Session struct {
-	Username    string       `json:"username"`
-	Password    string       `json:"password"`
-	RawKey      []byte       `json:"raw_key"`
-	Index       VaultIndex   `json:"index"`
-	SharedIndex *SharedIndex `json:"shared_index"`
+	Username    string        `json:"username"`
+	Password    string        `json:"password"`
+	RawKey      []byte        `json:"raw_key"`
+	Index       VaultIndex    `json:"index"`
+	SharedIndex *SharedIndex  `json:"shared_index"`
+	Settings    VaultSettings `json:"settings"`
 }
 
 // SetGlobalSession injects a session into RAM (used by the REPL)
@@ -60,6 +61,23 @@ func GetSession() (*Session, error) {
 	// 3. Ensure SharedIndex is initialized
 	if s.SharedIndex == nil {
 		s.SharedIndex = NewSharedIndex()
+	}
+
+	// 4. Apply defaults to settings if missing (for backward compatibility with old zephyrus.conf files)
+	if s.Settings.CommitAuthorName == "" {
+		s.Settings.CommitAuthorName = "Zephyrus"
+	}
+	if s.Settings.CommitAuthorEmail == "" {
+		s.Settings.CommitAuthorEmail = "auchrio@proton.me"
+	}
+	if s.Settings.CommitMessage == "" {
+		s.Settings.CommitMessage = "Zephyrus: Updated Vault"
+	}
+	if s.Settings.FileHashLength <= 0 {
+		s.Settings.FileHashLength = 16
+	}
+	if s.Settings.ShareHashLength <= 0 {
+		s.Settings.ShareHashLength = 6
 	}
 
 	return &s, err
@@ -111,11 +129,26 @@ func FetchSessionStateless(username string, password string) (*Session, error) {
 		}
 	}
 
+	// 4. Fetch & Decrypt Settings (use defaults if not present)
+	var settings VaultSettings
+	rawSettings, err := FetchRaw(username, ".config/settings")
+	if err != nil {
+		// Settings don't exist yet, use defaults
+		settings = DefaultSettings()
+	} else {
+		settings, err = SettingsFromBytes(rawSettings, password)
+		if err != nil {
+			// If settings are corrupted, fall back to defaults
+			settings = DefaultSettings()
+		}
+	}
+
 	return &Session{
 		Username:    username,
 		Password:    password,
 		RawKey:      rawKey,
 		Index:       index,
 		SharedIndex: sharedIndex,
+		Settings:    settings,
 	}, nil
 }

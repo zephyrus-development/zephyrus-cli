@@ -16,7 +16,13 @@ import (
 
 // PushFiles performs a stateless append/update to the repository.
 // It preserves existing files on GitHub without downloading them.
+// Pass empty string for commitAuthorName/Email to use defaults
 func PushFiles(repoURL string, rawPrivateKey []byte, files map[string][]byte, commitMsg string) error {
+	return PushFilesWithAuthor(repoURL, rawPrivateKey, files, commitMsg, "Zephyrus", "auchrio@proton.me")
+}
+
+// PushFilesWithAuthor performs a push with custom commit author
+func PushFilesWithAuthor(repoURL string, rawPrivateKey []byte, files map[string][]byte, commitMsg string, authorName string, authorEmail string) error {
 	publicKeys, _ := ssh.NewPublicKeys("git", rawPrivateKey, "")
 	publicKeys.HostKeyCallback = cryptossh.InsecureIgnoreHostKey()
 
@@ -64,7 +70,7 @@ func PushFiles(repoURL string, rawPrivateKey []byte, files map[string][]byte, co
 	}
 
 	commit, _ := w.Commit(commitMsg, &git.CommitOptions{
-		Author: &object.Signature{Name: "Zephyrus", Email: "Auchrio@proton.me", When: time.Now()},
+		Author: &object.Signature{Name: authorName, Email: authorEmail, When: time.Now()},
 	})
 
 	return r.Push(&git.PushOptions{

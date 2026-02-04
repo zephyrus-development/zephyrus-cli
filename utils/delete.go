@@ -96,10 +96,10 @@ func DeletePath(vaultPath string, session *Session) error {
 
 	// 7. Commit the changes
 	// Ensure you are passing *git.CommitOptions, not just the Signature
-	commit, err := w.Commit(fmt.Sprintf("Zephyrus: Updated Vault"), &git.CommitOptions{
+	commit, err := w.Commit(session.Settings.CommitMessage, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "Zephyrus",
-			Email: "Auchrio@proton.me",
+			Name:  session.Settings.CommitAuthorName,
+			Email: session.Settings.CommitAuthorEmail,
 			When:  time.Now(),
 		},
 	})

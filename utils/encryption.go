@@ -78,11 +78,15 @@ func Decrypt(data []byte, password string) ([]byte, error) {
 	return gcm.Open(nil, nonce, ciphertext, nil)
 }
 
-// GenerateRandomName creates a 16-character hex string (8 random bytes)
+// GenerateRandomName creates a hex string with configurable length (default 16 chars = 8 bytes)
 func GenerateRandomName() string {
-	bytes := make([]byte, 8)
+	return GenerateRandomNameWithLength(8) // 8 bytes = 16 hex chars
+}
+
+// GenerateRandomNameWithLength creates a configurable-length hex string
+func GenerateRandomNameWithLength(byteLength int) string {
+	bytes := make([]byte, byteLength)
 	if _, err := rand.Read(bytes); err != nil {
-		// This should theoretically never happen with a healthy system
 		panic(err)
 	}
 	return hex.EncodeToString(bytes)

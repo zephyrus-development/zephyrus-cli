@@ -33,7 +33,9 @@ func UploadFile(sourcePath string, vaultPath string, session *Session) error {
 		}
 	} else {
 		// New file: generate new storage name and file key
-		realName = GenerateRandomName()
+		// Use configurable hash length from settings
+		hashByteLength := session.Settings.FileHashLength / 2 // Convert hex chars to bytes
+		realName = GenerateRandomNameWithLength(hashByteLength)
 		fileKey = GenerateFileKey()
 
 		// Encrypt the file key with the vault password
@@ -65,7 +67,7 @@ func UploadFile(sourcePath string, vaultPath string, session *Session) error {
 		".config/index": indexBytes,
 	}
 
-	err = PushFiles(repoURL, session.RawKey, filesToPush, "Zephyrus: Updated Vault")
+	err = PushFilesWithAuthor(repoURL, session.RawKey, filesToPush, session.Settings.CommitMessage, session.Settings.CommitAuthorName, session.Settings.CommitAuthorEmail)
 	if err != nil {
 		return err
 	}

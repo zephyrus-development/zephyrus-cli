@@ -579,6 +579,102 @@ func main() {
 
 	sharedCmd.AddCommand(sharedLsCmd, sharedRmCmd, sharedInfoCmd)
 
+	// --- SETTINGS MANAGEMENT ---
+	var settingsCmd = &cobra.Command{
+		Use:   "settings",
+		Short: "Manage vault settings",
+	}
+
+	var settingsInfoCmd = &cobra.Command{
+		Use:   "info",
+		Short: "Display current vault settings",
+		Run: func(cmd *cobra.Command, args []string) {
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			fmt.Println("\n⚙️  VAULT SETTINGS")
+			fmt.Println("─────────────────────────────────────────")
+			fmt.Printf("Commit Author Name (author-name):       %s\n", session.Settings.CommitAuthorName)
+			fmt.Printf("Commit Author Email (author-email):     %s\n", session.Settings.CommitAuthorEmail)
+			fmt.Printf("Commit Message (commit-message):        %s\n", session.Settings.CommitMessage)
+			fmt.Printf("File Hash Length (file-hash-length):    %d characters\n", session.Settings.FileHashLength)
+			fmt.Printf("Share Hash Length (share-hash-length):  %d characters\n", session.Settings.ShareHashLength)
+			fmt.Println("─────────────────────────────────────────\n")
+		},
+	}
+
+	var settingsSetCmd = &cobra.Command{
+		Use:   "set [key] [value]",
+		Short: "Update a vault setting",
+		Long:  "Update a setting. Keys: author-name, author-email, commit-message, file-hash-length, share-hash-length",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			key := args[0]
+			value := args[1]
+
+			switch key {
+			case "author-name":
+				session.Settings.CommitAuthorName = value
+			case "author-email":
+				session.Settings.CommitAuthorEmail = value
+			case "commit-message":
+				session.Settings.CommitMessage = value
+			case "file-hash-length":
+				var length int
+				_, err := fmt.Sscanf(value, "%d", &length)
+				if err != nil {
+					fmt.Printf("❌ Invalid number: %v\n", err)
+					return
+				}
+				session.Settings.FileHashLength = length
+			case "share-hash-length":
+				var length int
+				_, err := fmt.Sscanf(value, "%d", &length)
+				if err != nil {
+					fmt.Printf("❌ Invalid number: %v\n", err)
+					return
+				}
+				session.Settings.ShareHashLength = length
+			default:
+				fmt.Printf("❌ Unknown setting: %s\n", key)
+				fmt.Println("Available keys: author-name, author-email, commit-message, file-hash-length, share-hash-length")
+				return
+			}
+
+			// Validate the settings
+			if err := session.Settings.Validate(); err != nil {
+				fmt.Printf("❌ Invalid setting: %v\n", err)
+				return
+			}
+
+			// Save settings to remote vault
+			err = utils.SaveSettings(session.Username, session.Password, session.RawKey, session.Settings)
+			if err != nil {
+				fmt.Printf("❌ Failed to save settings: %v\n", err)
+				return
+			}
+
+			// Save updated session if persistent
+			_, statErr := os.Stat("zephyrus.conf")
+			if statErr == nil {
+				session.Save()
+			}
+
+			fmt.Printf("✔ Setting '%s' updated to '%v'\n", key, value)
+		},
+	}
+
+	settingsCmd.AddCommand(settingsInfoCmd, settingsSetCmd)
+
 	// --- SHELL ---
 	var shellCmd = &cobra.Command{
 		Use:     "shell [username]",
@@ -596,7 +692,7 @@ func main() {
 	rootCmd.AddCommand(
 		setupCmd, connectCmd, disconnectCmd,
 		uploadCmd, downloadCmd, deleteCmd,
-		listCmd, searchCmd, purgeCmd, shareCmd, readCmd, sharedCmd,
+		listCmd, searchCmd, purgeCmd, shareCmd, readCmd, sharedCmd, settingsCmd,
 		shellCmd,
 	)
 
