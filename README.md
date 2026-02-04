@@ -10,7 +10,7 @@ A secure, encrypted file vault backed by GitHub. Store your sensitive files with
 
 Zephyrus CLI is a command-line tool that transforms your GitHub repository into a private, encrypted file vault. Your files are encrypted locally before being uploaded, ensuring that even if your GitHub repository is compromised, your data remains secure.
 
-Want an interactive demo of our sharing capabilities, [click here](https://zephyrus-development.github.io/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=) to download a demo txt file, or click the link: [https://zephyrus-development.github.io/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=](https://zephyrus-development.github.io/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=)
+Want an interactive demo of our sharing capabilities, [click here](https://zep.ftp.sh/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=) to download a demo txt file, or click the link: [https://zep.ftp.sh/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=](https://zep.ftp.sh/shared/#zephyrus-development:nOsiH8:password:RG93bmxvYWRNZS50eHQ=)
 
 **Key Features:**
 - 🔐 **End-to-End Encryption**: Files are encrypted with AES-256-GCM before leaving your computer
