@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,14 +21,7 @@ var (
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "zep",
-		Short: "Zephyrus CLI",
-		// This bit ensures the root command doesn't just print help
-		// if we want to trigger the REPL instead.
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				runInteractiveShell(cmd)
-			}
-		},
+		Short: "Zephyrus CLI - Secure Vault on GitHub",
 	}
 
 	// Persistent flag allows -u to be used across all subcommands
@@ -73,6 +65,95 @@ func main() {
 				keyPath = args[1]
 			}
 
+			// Interactive guide if no arguments provided
+			if len(args) == 0 {
+				fmt.Println("\n=== Zephyrus Vault Setup Guide ===\n")
+				fmt.Println("Before we begin, please ensure you have completed the following steps:\n")
+				fmt.Println("1. ✓ Created a GitHub account (https://github.com)")
+				fmt.Println("2. ✓ Created an EMPTY repository named `.zephyrus` in your GitHub account")
+				fmt.Println("3. ✓ Generated an SSH key pair (run: ssh-keygen -t ed25519)")
+				fmt.Println("4. ✓ Added your PUBLIC key as a Deploy Key to your `.zephyrus` repository")
+				fmt.Println("   - Go to: https://github.com/YOUR_USERNAME/.zephyrus/settings/keys")
+				fmt.Println("   - Click 'Add deploy key'")
+				fmt.Println("   - Paste your PUBLIC key (id_ed25519.pub) content")
+				fmt.Println("   - Enable 'Allow write access' ✓\n")
+				fmt.Println("Do you have all of this ready? (y/n): ")
+				var ready string
+				fmt.Scanln(&ready)
+				if ready != "y" && ready != "yes" {
+					fmt.Println("\n❌ Setup cancelled. Please complete the prerequisites first.")
+					fmt.Println("📖 For detailed instructions, visit: https://github.com/zephyrus-development/zephyrus-cli#setup-your-vault")
+					return
+				}
+
+				fmt.Println("\n--- Step 1: GitHub Username ---")
+				fmt.Print("Enter your GitHub username: ")
+				fmt.Scanln(&username)
+				if username == "" {
+					fmt.Println("❌ Username cannot be empty.")
+					return
+				}
+
+				fmt.Println("\n--- Step 2: SSH Private Key Path ---")
+				fmt.Print("Enter the path to your SSH PRIVATE key (e.g., ~/.ssh/id_ed25519): ")
+				reader := bufio.NewReader(os.Stdin)
+				keyPathInput, _ := reader.ReadString('\n')
+				keyPath = strings.TrimSpace(keyPathInput)
+				if keyPath == "" {
+					fmt.Println("❌ Key path cannot be empty.")
+					return
+				}
+
+				// Expand ~ to home directory
+				if strings.HasPrefix(keyPath, "~") {
+					home, err := os.UserHomeDir()
+					if err == nil {
+						keyPath = strings.Replace(keyPath, "~", home, 1)
+					}
+				}
+
+				// Verify key file exists
+				if _, err := os.Stat(keyPath); err != nil {
+					fmt.Printf("❌ SSH key file not found at: %s\n", keyPath)
+					return
+				}
+
+				fmt.Println("\n--- Step 3: Vault Password ---")
+				fmt.Println("Create a strong password to encrypt your SSH key.")
+				fmt.Println("⚠️  IMPORTANT: This password cannot be recovered. Please remember it!")
+				pass, _ := utils.GetPassword("Create Vault Password: ")
+				if pass == "" {
+					fmt.Println("❌ Password cannot be empty.")
+					return
+				}
+
+				passConfirm, _ := utils.GetPassword("Confirm Vault Password: ")
+				if pass != passConfirm {
+					fmt.Println("❌ Passwords do not match.")
+					return
+				}
+
+				fmt.Println("\n--- Initializing Vault ---")
+				fmt.Printf("Setting up vault for user: %s\n", username)
+				err := utils.SetupVault(username, keyPath, pass)
+				if err != nil {
+					fmt.Printf("❌ Setup failed: %v\n", err)
+					fmt.Println("\n📖 Troubleshooting:")
+					fmt.Println("- Ensure .zephyrus repository exists at https://github.com/" + username + "/.zephyrus")
+					fmt.Println("- Verify your SSH key has been added as a Deploy Key with write access")
+					fmt.Println("- Check that your SSH key has permissions (chmod 600 on Unix-like systems)")
+					return
+				}
+
+				fmt.Println("\n✔ Setup complete!")
+				fmt.Println("\n--- Next Steps ---")
+				fmt.Println("1. Run 'zep connect' to create a local session")
+				fmt.Println("2. Run 'zep upload <file> <vault-path>' to upload your first file")
+				fmt.Println("3. Run 'zep help' to see all available commands\n")
+				return
+			}
+
+			// Non-interactive mode (arguments provided)
 			if username == "" || keyPath == "" {
 				fmt.Println("Error: Username and Key Path are required.")
 				return
@@ -80,7 +161,8 @@ func main() {
 			pass, _ := utils.GetPassword("Create Vault Password: ")
 			err := utils.SetupVault(username, keyPath, pass)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Setup failed: %v\n", err)
+				return
 			}
 			fmt.Println("✔ Setup complete.")
 		},
@@ -104,7 +186,8 @@ func main() {
 			pass, _ := utils.GetPassword("Enter Password: ")
 			err := utils.Connect(target, pass)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Connection failed: %v\n", err)
+				return
 			}
 			fmt.Println("✔ Connected.")
 		},
@@ -115,20 +198,31 @@ func main() {
 		Use:     "upload [local-path] [vault-path]",
 		Aliases: []string{"up", "u", "add"}, // Multiple aliases allowed
 		Short:   "Upload a file to the vault",
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
+			localPath := args[0]
+			vaultPath := localPath
+			if len(args) > 1 {
+				vaultPath = args[1]
+			} else {
+				// Use basename of local path if vault path not provided
+				vaultPath = filepath.Base(localPath)
+			}
+
 			// 1. Check if the config file exists BEFORE starting
 			_, err := os.Stat("zephyrus.conf")
 			isPersistent := err == nil
 
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
-			err = utils.UploadFile(args[0], args[1], session)
+			err = utils.UploadFile(localPath, vaultPath, session)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Upload failed: %v\n", err)
+				return
 			}
 
 			// 2. Only save the updated index if we were already in a persistent session
@@ -145,13 +239,23 @@ func main() {
 		Use:     "download [vault-path] [local-path]",
 		Aliases: []string{"down", "d", "get"},
 		Short:   "Download a file from the vault",
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
+			vaultPath := args[0]
+			localPath := vaultPath
+			if len(args) > 1 {
+				localPath = args[1]
+			} else {
+				// Use basename of vault path if local path not provided
+				localPath = filepath.Base(vaultPath)
+			}
+
 			// Check if downloading a shared file
 			if sharedFlag != "" {
-				err := utils.DownloadSharedFile(sharedFlag, args[1])
+				err := utils.DownloadSharedFile(sharedFlag, localPath)
 				if err != nil {
-					log.Fatal(err)
+					fmt.Printf("❌ Shared file download failed: %v\n", err)
+					return
 				}
 				fmt.Println("✔ Shared file download successful.")
 				return
@@ -159,12 +263,14 @@ func main() {
 
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
-			err = utils.DownloadFile(args[0], args[1], session)
+			err = utils.DownloadFile(vaultPath, localPath, session)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Download failed: %v\n", err)
+				return
 			}
 			fmt.Println("✔ Download successful.")
 		},
@@ -183,12 +289,14 @@ func main() {
 
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
 			err = utils.DeletePath(args[0], session)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Delete failed: %v\n", err)
+				return
 			}
 
 			if isPersistent {
@@ -205,7 +313,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
 			path := ""
@@ -225,7 +334,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 			utils.SearchFiles(session, args[0])
 		},
@@ -242,7 +352,8 @@ func main() {
 
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
 			fmt.Print("⚠️  Confirm PURGE? This wipes all remote data and history. (y/N): ")
@@ -254,7 +365,8 @@ func main() {
 
 			err = utils.PurgeVault(session)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Purge failed: %v\n", err)
+				return
 			}
 
 			// Only update the local session file if it existed
@@ -279,19 +391,20 @@ func main() {
 
 	// --- SHARE ---
 	var shareCmd = &cobra.Command{
-		Use:     "share [vault-path]",
-		Aliases: []string{"sh"},
-		Short:   "Generate a share string for a file",
-		Args:    cobra.ExactArgs(1),
+		Use:   "share [vault-path]",
+		Short: "Generate a share string for a file",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			session, err := getEffectiveSession()
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
 			}
 
 			shareString, err := utils.ShareFile(args[0], session)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Printf("❌ Share failed: %v\n", err)
+				return
 			}
 
 			fmt.Println("Share this string to allow others to download the file:")
@@ -301,19 +414,25 @@ func main() {
 		},
 	}
 
+	// --- SHELL ---
+	var shellCmd = &cobra.Command{
+		Use:     "shell",
+		Aliases: []string{"sh"},
+		Short:   "Launch interactive REPL",
+		Run: func(cmd *cobra.Command, args []string) {
+			runInteractiveShell(rootCmd)
+		},
+	}
+
 	rootCmd.AddCommand(
 		setupCmd, connectCmd, disconnectCmd,
 		uploadCmd, downloadCmd, deleteCmd,
 		listCmd, searchCmd, purgeCmd, shareCmd,
+		shellCmd,
 	)
 
-	// Check if we should enter REPL or just execute once
-	if len(os.Args) > 1 {
-		if err := rootCmd.Execute(); err != nil {
-			os.Exit(1)
-		}
-	} else {
-		runInteractiveShell(rootCmd)
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
 	}
 }
 
@@ -399,7 +518,7 @@ func runInteractiveShell(rootCmd *cobra.Command) {
 
 		// We capture the error here so a failed command doesn't kill the shell
 		if cmdErr := rootCmd.Execute(); cmdErr != nil {
-			// Cobra usually prints the error itself, but this is a safety net
+			fmt.Printf("❌ Error: %v\n", cmdErr)
 		}
 	}
 }
