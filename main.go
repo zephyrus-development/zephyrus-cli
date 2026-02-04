@@ -481,8 +481,20 @@ func main() {
 	}
 
 	var sharedLsCmd = &cobra.Command{
-		Use:   "ls",
-		Short: "List all shared files",
+		Use:     "ls [file-name-pattern]",
+		Aliases: []string{"list", "find", "search"},
+		Short:   "List shared files (optionally search by name)",
+		Long: `List all shared files, or search by partial/fuzzy filename match.
+
+Without arguments: Shows all shared files with references and dates.
+With file-name-pattern: Searches for files matching the pattern.
+
+Examples:
+  zep shared ls                    # List all shared files
+  zep shared list                  # Same as ls (alias)
+  zep shared find report.pdf       # Find files matching "report.pdf"
+  zep shared search report         # Same as find (alias)`,
+		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			session, err := getEffectiveSession()
 			if err != nil {
@@ -490,27 +502,72 @@ func main() {
 				return
 			}
 
-			files := utils.ListSharedFiles(session)
-			if len(files) == 0 {
-				fmt.Println("No shared files.")
+			// If no arguments, list all shared files
+			if len(args) == 0 {
+				files := utils.ListSharedFiles(session)
+				if len(files) == 0 {
+					fmt.Println("No shared files.")
+					return
+				}
+
+				fmt.Println("\n📤 SHARED FILES")
+				fmt.Println("REFERENCE  FILE NAME              SHARED AT")
+				fmt.Println("---------  ----------              ---------")
+				for _, f := range files {
+					fmt.Printf("%-9s %-24s %s\n", f.Reference, f.OriginalPath, f.SharedAt.Format("2006-01-02 15:04"))
+				}
+				fmt.Println()
 				return
 			}
 
-			fmt.Println("\n📤 SHARED FILES")
-			fmt.Println("REFERENCE  FILE NAME              SHARED AT")
-			fmt.Println("---------  ----------              ---------")
-			for _, f := range files {
-				fmt.Printf("%-9s %-24s %s\n", f.Reference, f.OriginalPath, f.SharedAt.Format("2006-01-02 15:04"))
+			// If argument provided, search by name
+			nameQuery := args[0]
+			matches, err := utils.FindSharedFilesByName(nameQuery, session)
+			if err != nil {
+				fmt.Printf("❌ %v\n", err)
+				return
 			}
-			fmt.Println()
+
+			if len(matches) == 0 {
+				fmt.Printf("❌ No shared files found matching '%s'\n", nameQuery)
+				return
+			}
+
+			fmt.Printf("\n📂 Found %d match(es) for '%s':\n\n", len(matches), nameQuery)
+			for i, match := range matches {
+				fmt.Printf("[%d] %s\n", i+1, match.FileName)
+				fmt.Printf("    Vault Path: %s\n", match.OriginalPath)
+				fmt.Printf("    Reference:  %s\n", match.Reference)
+				fmt.Printf("    Match Type: ")
+				if match.MatchScore == 0 {
+					fmt.Println("Exact match")
+				} else if match.MatchScore < 50 {
+					fmt.Println("Prefix match")
+				} else {
+					fmt.Println("Substring match")
+				}
+				fmt.Println()
+			}
 		},
 	}
 
 	var sharedRmCmd = &cobra.Command{
-		Use:     "rm [reference]",
-		Aliases: []string{"revoke", "delete"},
-		Short:   "Revoke/remove a shared file",
-		Args:    cobra.ExactArgs(1),
+		Use:     "rm [reference-or-name]",
+		Aliases: []string{"revoke", "delete", "remove"},
+		Short:   "Revoke/remove a shared file by reference or name",
+		Long: `Revoke a shared file using its reference hash or file name.
+
+Can match by:
+  - Reference hash: zep shared rm AbC123
+  - File name (exact or partial): zep shared rm report.pdf
+
+Fuzzy matching is supported for file names:
+  - Exact match: "report.pdf"
+  - Prefix match: "report"
+  - Substring match: "port.pdf"
+
+If multiple files match a name, you'll be prompted to be more specific.`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			session, err := getEffectiveSession()
 			if err != nil {
@@ -518,10 +575,40 @@ func main() {
 				return
 			}
 
-			reference := args[0]
+			query := args[0]
+
+			// First, try to find by name (name matching is more flexible)
+			matches, err := utils.FindSharedFilesByName(query, session)
+			var reference string
+			var displayName string
+
+			if len(matches) > 0 {
+				// Found by name
+				if len(matches) > 1 {
+					// Ambiguous - show options
+					fmt.Printf("Multiple files match '%s':\n\n", query)
+					for i, match := range matches {
+						fmt.Printf("[%d] %s (ref: %s)\n", i+1, match.FileName, match.Reference)
+					}
+					fmt.Println("\n⚠️  Please be more specific with the file name.")
+					return
+				}
+				// Exactly one match
+				reference = matches[0].Reference
+				displayName = matches[0].FileName
+			} else {
+				// Not found by name - try as reference directly
+				entry, err := utils.GetSharedFileInfo(query, session)
+				if err != nil {
+					fmt.Printf("❌ No shared file found matching '%s'\n", query)
+					return
+				}
+				reference = entry.Reference
+				displayName = entry.OriginalPath
+			}
 
 			// Confirm revocation
-			fmt.Printf("⚠️  Revoke shared file %s? (y/N): ", reference)
+			fmt.Printf("⚠️  Revoke shared file '%s'? (y/N): ", displayName)
 			var confirm string
 			fmt.Scanln(&confirm)
 			if confirm != "y" && confirm != "yes" {
@@ -541,7 +628,7 @@ func main() {
 				session.Save()
 			}
 
-			fmt.Printf("✔ Shared file '%s' revoked.\n", reference)
+			fmt.Printf("✔ Shared file '%s' revoked.\n", displayName)
 		},
 	}
 
