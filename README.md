@@ -254,6 +254,153 @@ Revoke a share (stop allowing access):
 zep shared rm 72cTWg
 ```
 
+## Advanced Features
+
+### Directory Upload & Download
+
+Zephyrus supports uploading and downloading entire directories recursively, perfect for backing up projects or bulk file operations.
+
+**Upload Directory:**
+```bash
+# Upload entire directory structure
+./zep upload ./my-documents vault/backups/documents
+
+# This uploads all files and subdirectories while preserving structure
+```
+
+**Download Directory:**
+```bash
+# Download entire directory from vault
+./zep download vault/backups/documents ./restored-documents
+
+# All files and folder structure recreated locally
+```
+
+**Features:**
+- ✅ Preserves full directory structure
+- ✅ Recursively processes nested folders
+- ✅ Each file encrypted independently
+- ✅ Atomic operation (all or nothing)
+- ✅ Progress tracking for large directories
+
+See [`docs/UPLOAD.md`](./docs/UPLOAD.md) and [`docs/DOWNLOAD.md`](./docs/DOWNLOAD.md) for detailed information.
+
+### Transfer Vault Between Accounts
+
+Migrate your entire vault to a different GitHub account with a single command.
+
+**Transfer Vault:**
+```bash
+# Migrate all files to different GitHub account
+./zep transfer-vault source-username dest-username
+```
+
+**What It Does:**
+1. Authenticates with source vault (old account)
+2. Authenticates with destination vault (new account)
+3. Fetches all files from source vault
+4. Decrypts with source password
+5. Re-encrypts with destination password
+6. Uploads to destination vault
+
+**Example:**
+```bash
+./zep transfer-vault old-github-user new-github-user
+# Password for old-github-user: ••••••••••
+# Password for new-github-user: ••••••••••
+# Confirm transfer: [y/N] y
+
+# Processing: 100%
+# ✔ Transfer complete: 42 files migrated
+```
+
+**Use Cases:**
+- Switching to a new GitHub account
+- Consolidating multiple accounts
+- Transferring vault to team member
+- Account recovery
+
+See [`docs/TRANSFER.md`](./docs/TRANSFER.md) for complete documentation.
+
+### Password Reset
+
+Change your vault password and re-encrypt all vault data with the new password.
+
+**Reset Password:**
+```bash
+# Reset vault password (will re-encrypt all vault data)
+./zep reset-password
+```
+
+**Interactive Process:**
+```
+Enter current password for verification: ••••••••••
+Enter new password: ••••••••••
+Confirm new password: ••••••••••
+
+Processing vault re-encryption...
+[1/5] Validating password...
+[2/5] Updating master key...
+[3/5] Re-encrypting all file keys...
+[4/5] Re-encrypting vault components...
+[5/5] Uploading changes to GitHub...
+
+✔ Password successfully reset
+```
+
+**Key Points:**
+- ⚠️ Cannot be reverted (new password is permanent)
+- ✅ Every file in vault re-encrypted with new key
+- ✅ All file encryption keys updated
+- ✅ Vault structure remains the same
+- ✅ All files remain accessible with new password
+
+See [`docs/AUTH.md`](./docs/AUTH.md) for security considerations and detailed information.
+
+### Web Interface
+
+Access your vault through a modern web browser without installing CLI tools.
+
+**Features:**
+- 🌐 Browser-based file access and download
+- 🔐 Client-side decryption (zero-knowledge)
+- 📁 File browsing and navigation
+- 🔗 Secure shareable file links
+- 📱 Mobile and tablet support
+- 🔑 GitHub OAuth authentication support
+
+**Access Your Vault:**
+```
+https://<your-github-username>.github.io/zephyrus
+```
+
+**Capabilities:**
+- View and download files directly in browser
+- Share individual files with unique encryption
+- Browse vault folder structure
+- Mobile-friendly interface
+- No CLI installation required
+
+See [`docs/WEB.md`](./docs/WEB.md) for complete web interface documentation.
+
+### Icons & Branding
+
+Your Zephyrus web interface includes professional icons and branding assets:
+
+**Included Icons:**
+- 🎨 Favicon (multiple sizes: 16px, 32px, 96px)
+- 📱 Apple device icons (9 different sizes: 57px-180px)
+- 🤖 Android icon (192px)
+- 🪟 Windows tile icon (144px)
+- 🎯 Manifest.json for PWA support
+- 🎨 Custom brand color (Purple #7431ff)
+- 🌐 Open Graph meta tags for social media
+
+**Location:**
+Images and icons are stored in `pages/images/` directory and automatically referenced by all web pages.
+
+---
+
 ## Command Reference
 
 

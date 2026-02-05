@@ -159,3 +159,121 @@ if err != nil {
 // Index is updated and pushed to GitHub
 // Both files and index are synced with remote
 ```
+
+---
+
+## Directory Upload
+
+### UploadDirectory
+
+```go
+func UploadDirectory(sourceDirPath string, vaultPath string, session *Session) error
+```
+
+Uploads an entire directory recursively to the vault, preserving folder structure and encrypting all files.
+
+**Parameters:**
+- `sourceDirPath`: The path to the local directory (e.g., "./documents")
+- `vaultPath`: The destination path in the vault (e.g., "backups/documents")
+- `session`: The active session with authentication and encryption credentials
+
+**Return:**
+- `error`: Returns error if directory reading, any file encryption, or push fails
+
+### Directory Upload Process
+
+1. **Verify Directory**: Confirms path is a directory, not a file
+2. **Create Vault Path**: Creates necessary folder structure in vault index
+3. **Recursively Walk Files**: Iterates through all files using `filepath.Walk()`
+4. **Process Each File**:
+   - Maintains relative paths from source directory
+   - Reads file content
+   - Generates new encryption key for each file
+   - Encrypts with vault password
+   - Adds entry to vault index
+   - Collects for batch upload
+5. **Batch Upload**: Uploads all files to GitHub in single push
+6. **Index Update**: Encrypts and uploads updated vault index
+
+### Usage Examples
+
+```bash
+# Upload entire local directory
+zep upload ./my-folder vault/my-folder
+
+# Upload project directory
+zep upload ./project backup/project
+
+# Upload with custom name
+zep upload ./documents archive/docs-backup
+```
+
+### Directory Structure Preservation
+
+```
+Local Directory:
+./documents/
+  report.pdf
+  notes.txt
+  subfolder/
+    memo.pdf
+    archive.zip
+
+Vault Structure:
+vault/documents/
+  report.pdf
+  notes.txt
+  subfolder/
+    memo.pdf
+    archive.zip
+```
+
+### Progress Output
+
+```
+Scanning directory: ./documents
+Processing file (1): report.pdf
+  → New file: vault/documents/report.pdf as a3f2e1c9d4b6f8e2
+Processing file (2): notes.txt
+  → New file: vault/documents/notes.txt as b4g3f2d0e5c7h9f3
+Processing file (3): subfolder/memo.pdf
+  → New file: vault/documents/subfolder/memo.pdf as c5h4g3e1f6d8i0j4
+
+Uploading 3 files to vault...
+[1/2] Encrypting vault index...
+[2/2] Uploading to GitHub...
+
+✔ Successfully uploaded 3 files from directory
+```
+
+### Features
+
+- ✅ **Recursive Processing**: Handles nested folders of any depth
+- ✅ **Per-File Encryption**: Each file gets unique encryption key
+- ✅ **Atomic Upload**: All files and index uploaded in single batch
+- ✅ **Structure Preservation**: Folder hierarchy maintained exactly
+- ✅ **Progress Tracking**: Shows file count and processing status
+- ✅ **Error Handling**: Reports failures with detailed context
+
+### Use Cases
+
+1. **Backup Entire Projects**
+   ```bash
+   zep upload ./project backup/my-project
+   ```
+
+2. **Archive Bulk Documents**
+   ```bash
+   zep upload ./documents vault/documents-archive
+   ```
+
+3. **Upload Photo Collections**
+   ```bash
+   zep upload ./photos vault/photos/2024
+   ```
+
+### Related Commands
+
+- [`zep download`](DOWNLOAD.md): Download entire directories
+- [`zep list`](LIST.md): View vault structure
+- [`zep transfer-vault`](TRANSFER.md): Migrate directories to another vault
