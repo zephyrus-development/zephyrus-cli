@@ -1,0 +1,46 @@
+name: Deploy Pages to zephyrus-development.github.io
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pages/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout zephyrus-cli repository
+        uses: actions/checkout@v4
+        with:
+          path: zephyrus-source
+
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: zephyrus-development/zephyrus-development.github.io
+          token: ${{ secrets.SCOOP_UPDATE_TOKEN }}
+          path: pages-target
+
+      - name: Copy pages directory contents
+        run: |
+          cp -r zephyrus-source/pages/* pages-target/
+          cp -r zephyrus-source/pages/. pages-target/
+
+      - name: Commit and push changes
+        working-directory: pages-target
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          if git diff --quiet --cached; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update pages from zephyrus-cli [skip ci]"
+            git push
+          fi
