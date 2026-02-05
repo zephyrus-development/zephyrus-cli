@@ -198,7 +198,7 @@ func main() {
 	var uploadCmd = &cobra.Command{
 		Use:     "upload [local-path] [vault-path]",
 		Aliases: []string{"up", "u", "add"}, // Multiple aliases allowed
-		Short:   "Upload a file to the vault",
+		Short:   "Upload a file or directory to the vault",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			localPath := args[0]
@@ -220,9 +220,24 @@ func main() {
 				return
 			}
 
-			err = utils.UploadFile(localPath, vaultPath, session)
+			// Check if the local path is a directory
+			fileInfo, err := os.Stat(localPath)
 			if err != nil {
-				fmt.Printf("❌ Upload failed: %v\n", err)
+				fmt.Printf("❌ Cannot access path: %v\n", err)
+				return
+			}
+
+			var uploadErr error
+			if fileInfo.IsDir() {
+				// Directory upload
+				uploadErr = utils.UploadDirectory(localPath, vaultPath, session)
+			} else {
+				// Single file upload
+				uploadErr = utils.UploadFile(localPath, vaultPath, session)
+			}
+
+			if uploadErr != nil {
+				fmt.Printf("❌ Upload failed: %v\n", uploadErr)
 				return
 			}
 
