@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -151,4 +152,121 @@ func FetchSessionStateless(username string, password string) (*Session, error) {
 		SharedIndex: sharedIndex,
 		Settings:    settings,
 	}, nil
+}
+
+// ResetPassword changes the vault password and re-encrypts all protected data
+func ResetPassword(session *Session, newPassword string) error {
+	repoURL := fmt.Sprintf("git@github.com:%s/.zephyrus.git", session.Username)
+
+	PrintProgressStep(1, 5, "Validating new password...")
+	if newPassword == "" {
+		return fmt.Errorf("new password cannot be empty")
+	}
+	PrintCompletionLine("Password validated")
+
+	// Re-encrypt master key with new password
+	PrintProgressStep(2, 5, "Re-encrypting master key...")
+	newMasterKeyEncrypted, err := Encrypt(session.RawKey, newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt master key: %w", err)
+	}
+	PrintCompletionLine("Master key re-encrypted")
+
+	// Re-encrypt index with new password
+	// First, we need to update all file keys in the index
+	PrintProgressStep(3, 5, "Re-encrypting vault index...")
+	err = updateIndexFileKeysForPassword(session.Index, session.Password, newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to update file keys: %w", err)
+	}
+
+	indexBytes, err := session.Index.ToBytes(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt index: %w", err)
+	}
+	PrintCompletionLine("Vault index re-encrypted")
+
+	// Re-encrypt settings with new password
+	PrintProgressStep(4, 5, "Re-encrypting settings...")
+	settingsBytes, err := session.Settings.ToBytes(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt settings: %w", err)
+	}
+	PrintCompletionLine("Settings re-encrypted")
+
+	// Re-encrypt shared index with new password
+	sharedIndexEncrypted, err := session.SharedIndex.EncryptForRemote(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt shared index: %w", err)
+	}
+
+	// Push all re-encrypted files to GitHub
+	PrintProgressStep(5, 5, "Pushing updated files to GitHub...")
+	filesToPush := map[string][]byte{
+		".config/key":          newMasterKeyEncrypted,
+		".config/index":        indexBytes,
+		".config/settings":     settingsBytes,
+		"shared/.config/index": sharedIndexEncrypted,
+	}
+
+	err = PushFilesWithAuthor(repoURL, session.RawKey, filesToPush, session.Settings.CommitMessage, session.Settings.CommitAuthorName, session.Settings.CommitAuthorEmail)
+	if err != nil {
+		return fmt.Errorf("failed to push updated files: %w", err)
+	}
+	PrintCompletionLine("Files pushed to GitHub")
+
+	// Update session password and save locally if persistent
+	session.Password = newPassword
+	session.Save()
+
+	return nil
+}
+
+// updateIndexFileKeysForPassword recursively updates all file key encryption in the index
+func updateIndexFileKeysForPassword(vi VaultIndex, oldPassword string, newPassword string) error {
+	return updateIndexTreeFileKeys(vi, oldPassword, newPassword)
+}
+
+// updateIndexTreeFileKeys recursively walks the index and updates file key encryption
+func updateIndexTreeFileKeys(entries VaultIndex, oldPassword string, newPassword string) error {
+	for name, entry := range entries {
+		if entry.Type == "file" {
+			// Decrypt file key with old password
+			encryptedKey, err := DecryptHexString(entry.FileKey, oldPassword)
+			if err != nil {
+				return fmt.Errorf("failed to decrypt file key: %w", err)
+			}
+
+			// Re-encrypt with new password
+			newEncryptedKey, err := Encrypt(encryptedKey, newPassword)
+			if err != nil {
+				return fmt.Errorf("failed to re-encrypt file key: %w", err)
+			}
+
+			// Update the entry with hex-encoded new encrypted key
+			entry.FileKey = HexEncodeBytes(newEncryptedKey)
+			entries[name] = entry // Write back to map
+		} else if entry.Type == "folder" && entry.Contents != nil {
+			// Recurse into subdirectories
+			err := updateIndexTreeFileKeys(entry.Contents, oldPassword, newPassword)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// DecryptHexString decrypts a hex-encoded encrypted string
+func DecryptHexString(hexStr string, password string) ([]byte, error) {
+	encryptedData, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, err
+	}
+	return Decrypt(encryptedData, password)
+}
+
+// HexEncodeBytes encodes bytes as a hex string
+func HexEncodeBytes(data []byte) string {
+	return hex.EncodeToString(data)
 }

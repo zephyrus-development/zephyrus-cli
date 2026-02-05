@@ -169,6 +169,81 @@ func main() {
 		},
 	}
 
+	// --- RESET PASSWORD ---
+	var resetPasswordCmd = &cobra.Command{
+		Use:     "reset-password",
+		Aliases: []string{"reset-pass", "change-password", "change-pass"},
+		Short:   "Change your vault password",
+		Args:    cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			// Check if the config file exists BEFORE starting
+			_, err := os.Stat("zephyrus.conf")
+			isPersistent := err == nil
+
+			session, err := getEffectiveSession()
+			if err != nil {
+				fmt.Printf("❌ Authentication failed: %v\n", err)
+				return
+			}
+
+			// Confirm current password
+			fmt.Println("For security, please confirm your current vault password.")
+			currentPass, err := utils.GetPassword("Current Vault Password: ")
+			if err != nil {
+				fmt.Printf("❌ Error reading password: %v\n", err)
+				return
+			}
+
+			if currentPass != session.Password {
+				fmt.Println("❌ Current password is incorrect.")
+				return
+			}
+
+			// Get new password
+			fmt.Println("\nCreate a new vault password.")
+			fmt.Println("⚠️  IMPORTANT: This password cannot be recovered. Please remember it!")
+			newPass, err := utils.GetPassword("New Vault Password: ")
+			if err != nil {
+				fmt.Printf("❌ Error reading password: %v\n", err)
+				return
+			}
+
+			if newPass == "" {
+				fmt.Println("❌ New password cannot be empty.")
+				return
+			}
+
+			// Confirm new password
+			passConfirm, err := utils.GetPassword("Confirm New Vault Password: ")
+			if err != nil {
+				fmt.Printf("❌ Error reading password: %v\n", err)
+				return
+			}
+
+			if newPass != passConfirm {
+				fmt.Println("❌ New passwords do not match.")
+				return
+			}
+
+			fmt.Println("\nResetting vault password...")
+
+			// Reset the password
+			err = utils.ResetPassword(session, newPass)
+			if err != nil {
+				fmt.Printf("❌ Password reset failed: %v\n", err)
+				return
+			}
+
+			// Only save the updated session if we were already in a persistent session
+			if isPersistent {
+				session.Save()
+			}
+
+			fmt.Println("✔ Password reset successful!")
+			fmt.Println("Your vault has been re-encrypted with the new password.")
+		},
+	}
+
 	// --- CONNECT ---
 	var connectCmd = &cobra.Command{
 		Use:     "connect [username]",
@@ -877,7 +952,7 @@ Examples:
 	}
 
 	rootCmd.AddCommand(
-		setupCmd, connectCmd, disconnectCmd,
+		setupCmd, connectCmd, resetPasswordCmd, disconnectCmd,
 		uploadCmd, downloadCmd, deleteCmd,
 		listCmd, searchCmd, purgeCmd, shareCmd, readCmd, sharedCmd, settingsCmd, infoCmd,
 		locallsCmd, localdirCmd,
